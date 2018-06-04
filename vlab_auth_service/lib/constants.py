@@ -29,7 +29,7 @@ DEFINED = OrderedDict([
             ('AUTH_SEARCH_BASE', 'DC=localhost,DC=local'),
             ('AUTH_TOKEN_ALGORITHM', environ.get('AUTH_TOKEN_ALGORITHM', 'HS256')),
             ('AUTH_TOKEN_TIMEOUT', int(environ.get('AUTH_TOKEN_TIMEOUT', 300))),
-            ('AUTH_TOKEN_SECRET', pub_key),
+            ('AUTH_TOKEN_SECRET', secret),
             ('AUTH_TOKEN_PUB_KEY', pub_key),
             ('AUTH_TOKEN_KEY_FORMAT', 'pem'),
             ('VLAB_URL', environ.get('VLAB_URL', 'https://localhost')),
