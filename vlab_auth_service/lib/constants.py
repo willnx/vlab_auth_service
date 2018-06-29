@@ -26,7 +26,7 @@ DEFINED = OrderedDict([
             ('AUTH_LDAP_URL', environ.get('AUTH_LDAP_URL', 'ldaps://localhost')),
             ('AUTH_BASE', environ.get('AUTH_BASE', 'localhost.local')),
             ('FAILED_LOGIN_PAUSE', 0.2), # Slow down any brute force login attempt
-            ('AUTH_SEARCH_BASE', 'DC=localhost,DC=local'),
+            ('AUTH_SEARCH_BASE', environ.get('AUTH_SEARCH_BASE','DC=localhost,DC=local')),
             ('AUTH_TOKEN_ALGORITHM', environ.get('AUTH_TOKEN_ALGORITHM', 'HS256')),
             ('AUTH_TOKEN_TIMEOUT', int(environ.get('AUTH_TOKEN_TIMEOUT', 300))),
             ('AUTH_TOKEN_SECRET', secret),
