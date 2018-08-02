@@ -56,7 +56,7 @@ an example compose file for a dev/test environment would look like:
         - VLAB_URL=https://localhost
         - AUTH_LDAP_URL=ldaps://my.real.dc.corp
         - AUTH_SEARCH_BASE=DC=root,DC=for,DC=search,DC=corp
-        - AUTH_BASE=my.real.dc.corp
+        - AUTH_DOMAIN=CORP
      auth-redis:
       image:
         redis:3.2-alpine

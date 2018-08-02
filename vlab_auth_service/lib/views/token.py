@@ -178,7 +178,7 @@ def _user_ok(ldap_conn, username, log=logger):
     :param log: A logging object
     :param log: logging.Logger
     """
-    search_filter = '(&(objectclass=User)(uid=%s))' % username
+    search_filter = '(&(objectclass=User)(sAMAccountName=%s))' % username
     ldap_conn.search(search_base=const.AUTH_SEARCH_BASE,
                      search_filter=search_filter,
                      attributes=['memberOf', 'userAccountControl'])
@@ -223,7 +223,7 @@ def _bind_ldap(username, password, log=logger):
     conn = None
     status = 200
     try:
-        full_username = "{0}@{1}".format(username, const.AUTH_BASE)
+        full_username = "{0}\{1}".format(const.AUTH_DOMAIN, username)
         server = ldap3.Server(const.AUTH_LDAP_URL)
         conn = ldap3.Connection(server, full_username, password, auto_bind=True)
     except LDAPBindError:
