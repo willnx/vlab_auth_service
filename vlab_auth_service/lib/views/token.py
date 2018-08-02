@@ -24,15 +24,9 @@ class TokenView(BaseView):
     """API end point for obtaining an auth token"""
     route_base = '/api/1/auth/token'
     version = 1
-    GET_ARGS_SCHEMA = {"$schema": "http://json-schema.org/draft-04/schema#",
-    	               "type": "object",
-                       "properties": {
-                          "token" : {
-                          "type" : "string",
-                          "description" : "Check if the token has been deleted"
-                          }
-                       }
-                      }
+    GET_SCHEMA = {"$schema": "http://json-schema.org/draft-04/schema#",
+                  "description" : "Check if the token has been deleted"
+                 }
     DELETE_SCHEMA = {"$schema": "http://json-schema.org/draft-04/schema#",
     	             "type": "object",
                 	 "properties": {
@@ -63,13 +57,13 @@ class TokenView(BaseView):
                 	]
                 }
 
-    @describe(get_args=GET_ARGS_SCHEMA, delete=DELETE_SCHEMA, post=POST_SCHEMA)
+    @describe(get=GET_SCHEMA, delete=DELETE_SCHEMA, post=POST_SCHEMA)
     def get(self):
         """Check if a token has been deleted"""
         resp = {'user' : 'unknown'}
-        token = request.args.get('token', default=None)
+        token = request.headers.get('X-Auth', default=None)
         if token is None:
-            resp['error'] = "Must supply the token parameter"
+            resp['error'] = "Must supply the token via the 'X-Auth' HTTP header"
             return ujson.dumps(resp), 400
         try:
             redis_server = StrictRedis(host=const.AUTH_REDIS_HOSTNAME, port=const.AUTH_REDIS_PORT)
