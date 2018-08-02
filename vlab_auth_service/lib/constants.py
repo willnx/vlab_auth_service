@@ -24,7 +24,7 @@ DEFINED = OrderedDict([
             ('AUTH_REDIS_HOSTNAME', environ.get('AUTH_REDIS_HOSTNAME', 'auth-redis')),
             ('AUTH_REDIS_PORT', environ.get('AUTH_REDIS_PORT', '6379')),
             ('AUTH_LDAP_URL', environ.get('AUTH_LDAP_URL', 'ldaps://localhost')),
-            ('AUTH_BASE', environ.get('AUTH_BASE', 'localhost.local')),
+            ('AUTH_DOMAIN', environ.get('AUTH_DOMAIN', 'CORP')),
             ('FAILED_LOGIN_PAUSE', 0.2), # Slow down any brute force login attempt
             ('AUTH_SEARCH_BASE', environ.get('AUTH_SEARCH_BASE','DC=localhost,DC=local')),
             ('AUTH_TOKEN_ALGORITHM', environ.get('AUTH_TOKEN_ALGORITHM', 'HS256')),

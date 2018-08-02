@@ -29,14 +29,14 @@ class AuthApiTokenGet(ApiTester):
     A set of test cases for GET on '/api/1/auth/token'
     """
     def test_get_describe(self):
-        """?describe=trues returns JSON"""
+        """?describe=true returns JSON"""
         resp = self.app.get('/api/1/auth/token?describe=true')
         data = resp.get_json()
 
         self.assertEqual(resp.headers['content-type'], 'application/json')
 
     def test_get_no_token(self):
-        """GET on /api/1/auth/token without param 'token' returns 400"""
+        """GET on /api/1/auth/token without header 'X-Auth' or param ?describe=true returns 400"""
         resp = self.app.get('/api/1/auth/token')
 
         self.assertEqual(resp.status_code, 400)
@@ -47,7 +47,7 @@ class AuthApiTokenGet(ApiTester):
         """GET on /api/1/auth/token returns 503 when RedisError is encounted"""
         fake_strict_redis.side_effect = RedisError('testing')
 
-        resp = self.app.get('/api/1/auth/token?token=asdfasdfasdfasdfsdf')
+        resp = self.app.get('/api/1/auth/token', headers={'X-Auth': 'asdfasdfasdfasdfsdf'})
 
         self.assertEqual(resp.status_code, 503)
 
@@ -56,7 +56,7 @@ class AuthApiTokenGet(ApiTester):
     def test_get_token_deleted(self, fake_logger, fake_strict_redis):
         """GET on /api/1/auth/token returns 404 when the token has been deleted"""
         fake_strict_redis.return_value.get.return_value = False
-        resp = self.app.get('/api/1/auth/token?token=asdfasdfasdfasdfsdf')
+        resp = self.app.get('/api/1/auth/token', headers={'X-Auth': 'asdfasdfasdfasdfsdf'})
 
         self.assertEqual(resp.status_code, 404)
 
@@ -64,7 +64,7 @@ class AuthApiTokenGet(ApiTester):
     @patch.object(token, 'logger')
     def test_get_ok(self, fake_logger, fake_strict_redis):
         """GET on /api/1/auth/token returns 200 when the token is valid"""
-        resp = self.app.get('/api/1/auth/token?token=asdfasdfasdfasdfsdf')
+        resp = self.app.get('/api/1/auth/token', headers={'X-Auth': 'asdfasdfasdfasdfsdf'})
 
         self.assertEqual(resp.status_code, 200)
 
@@ -239,7 +239,7 @@ class AuthApiTokenSchemas(unittest.TestCase):
     def test_get_args_schema(self):
         """The schema we've defined for GET args on /api/1/auth/token is valid"""
         try:
-            Draft4Validator.check_schema(token.TokenView.GET_ARGS_SCHEMA)
+            Draft4Validator.check_schema(token.TokenView.GET_SCHEMA)
             schema_valid = True
         except RuntimeError:
             schema_valid = False

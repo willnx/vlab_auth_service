@@ -24,15 +24,9 @@ class TokenView(BaseView):
     """API end point for obtaining an auth token"""
     route_base = '/api/1/auth/token'
     version = 1
-    GET_ARGS_SCHEMA = {"$schema": "http://json-schema.org/draft-04/schema#",
-    	               "type": "object",
-                       "properties": {
-                          "token" : {
-                          "type" : "string",
-                          "description" : "Check if the token has been deleted"
-                          }
-                       }
-                      }
+    GET_SCHEMA = {"$schema": "http://json-schema.org/draft-04/schema#",
+                  "description" : "Check if the token has been deleted"
+                 }
     DELETE_SCHEMA = {"$schema": "http://json-schema.org/draft-04/schema#",
     	             "type": "object",
                 	 "properties": {
@@ -63,13 +57,13 @@ class TokenView(BaseView):
                 	]
                 }
 
-    @describe(get_args=GET_ARGS_SCHEMA, delete=DELETE_SCHEMA, post=POST_SCHEMA)
+    @describe(get=GET_SCHEMA, delete=DELETE_SCHEMA, post=POST_SCHEMA)
     def get(self):
         """Check if a token has been deleted"""
         resp = {'user' : 'unknown'}
-        token = request.args.get('token', default=None)
+        token = request.headers.get('X-Auth', default=None)
         if token is None:
-            resp['error'] = "Must supply the token parameter"
+            resp['error'] = "Must supply the token via the 'X-Auth' HTTP header"
             return ujson.dumps(resp), 400
         try:
             redis_server = StrictRedis(host=const.AUTH_REDIS_HOSTNAME, port=const.AUTH_REDIS_PORT)
@@ -184,7 +178,7 @@ def _user_ok(ldap_conn, username, log=logger):
     :param log: A logging object
     :param log: logging.Logger
     """
-    search_filter = '(&(objectclass=User)(uid=%s))' % username
+    search_filter = '(&(objectclass=User)(sAMAccountName=%s))' % username
     ldap_conn.search(search_base=const.AUTH_SEARCH_BASE,
                      search_filter=search_filter,
                      attributes=['memberOf', 'userAccountControl'])
@@ -229,7 +223,7 @@ def _bind_ldap(username, password, log=logger):
     conn = None
     status = 200
     try:
-        full_username = "{0}@{1}".format(username, const.AUTH_BASE)
+        full_username = "{0}\{1}".format(const.AUTH_DOMAIN, username)
         server = ldap3.Server(const.AUTH_LDAP_URL)
         conn = ldap3.Connection(server, full_username, password, auto_bind=True)
     except LDAPBindError:
