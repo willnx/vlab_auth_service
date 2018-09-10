@@ -23,4 +23,7 @@ test: uninstall install
 	cd tests && nosetests -v --with-coverage --cover-package=vlab_auth_service
 
 images: build
-	sudo docker build -t willnx/vlab-auth-service .
+	docker build -t willnx/vlab-auth-service .
+
+up: clean
+	docker-compose up --abort-on-container-exit
