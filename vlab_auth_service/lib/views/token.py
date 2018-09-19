@@ -173,7 +173,7 @@ class TokenView2(TokenView):
             password = body['password']
         resp['user'] = username
         try:
-            client_ip = request.headers.getlist("X-Forwarded-For")[0]
+            client_ip = request.headers.getlist("X-Forwarded-For")[-1]
         except IndexError:
             client_ip = request.remote_addr
 
