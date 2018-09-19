@@ -117,6 +117,59 @@ Here's a list of the environment variables to set, and what they mean:
 
 
 ************
+Token Schema
+************
+
+The currently are two different versions of a token that this service provides.
+
+Version 1
+=========
+
+This is the original schema. It contained the following key-value pairs:
+
++----------+-----------------------------------------------------------------------------------+
+|   Key    | Value Description                                                                 |
++==========+===================================================================================+
+|   exp    | EPOCH timestamp of when the token expires                                         |
++----------+-----------------------------------------------------------------------------------+
+|   iat    | EPOCH timestamp of when the token was issued                                      |
++----------+-----------------------------------------------------------------------------------+
+|   iss    | The URL of the auth server that generated the token                               |
++----------+-----------------------------------------------------------------------------------+
+| username | The user who owns the token (and successfully authenticated)                      |
++----------+-----------------------------------------------------------------------------------+
+| version  | Static value of 1                                                                 |
++----------+-----------------------------------------------------------------------------------+
+| memberOf | An array of the ``memberOf`` attribute of the user from the back-end Microsoft AD |
++----------+-----------------------------------------------------------------------------------+
+
+Version 2
+=========
+
+This is the current version of the token. It was created to address an issue with
+the ``memberOf`` attribute of the v1 token, where a user's group membership was so
+large that it would exceed reasonable HTTP header size limits of popular web servers.
+In addition, inclusion of a ``client_ip`` attribute makes hijacking a v2 token less
+trivial.
+
++-----------+--------------------------------------------------------------+
+|    Key    | Value Description                                            |
++===========+==============================================================+
+|    exp    | EPOCH timestamp of when the token expires                    |
++-----------+--------------------------------------------------------------+
+|    iat    | EPOCH timestamp of when the token was issued                 |
++-----------+--------------------------------------------------------------+
+|    iss    | The URL of the auth server that generated the token          |
++-----------+--------------------------------------------------------------+
+|  username | The user who owns the token (and successfully authenticated) |
++-----------+--------------------------------------------------------------+
+|  version  | Static value of 2                                            |
++-----------+--------------------------------------------------------------+
+| client_ip | The IP of the machine used by the client to obtain a token   |
++-----------+--------------------------------------------------------------+
+
+
+************
 API Examples
 ************
 

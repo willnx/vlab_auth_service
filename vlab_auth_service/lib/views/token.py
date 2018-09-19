@@ -15,7 +15,7 @@ from vlab_api_common import BaseView, describe, get_logger
 from jsonschema import validate, ValidationError
 
 from vlab_auth_service.lib import const
-from vlab_auth_service.lib.generate_token import generate_token
+from vlab_auth_service.lib.generate_token import generate_token, generate_v2_token
 
 logger = get_logger(__name__, loglevel=const.AUTH_LOG_LEVEL)
 
@@ -135,6 +135,72 @@ class TokenView(BaseView):
             except RedisError as doh:
                 logger.exception(doh)
                 resp['error'] = "unable to delete token"
+                status = 503
+        return ujson.dumps(resp), status
+
+
+class TokenView2(TokenView):
+    """API end point for obtaining an version 2 schema auth token"""
+    route_base = '/api/2/auth/token'
+    version = 2
+    POST_SCHEMA = { "$schema": "http://json-schema.org/draft-04/schema#",
+                    "type": "object",
+                    "properties": {
+                        "username": {
+                            "type": "string",
+                            "description": "The username to authenticate"
+                        },
+                        "password": {
+                            "type": "string",
+                            "description": "The password for the user"
+                        }
+                    },
+                    "required": [
+                        "username",
+                        "password"
+                    ]
+                }
+
+    def post(self, *args, **kwargs):
+        """Obtain an v2 auth token"""
+        resp = {"user" : "unknown"}
+        body = request.get_json()
+        if not _input_valid(body=body, schema=self.POST_SCHEMA):
+            resp['error'] = 'Invalid HTTP body supplied'
+            return ujson.dumps(resp), 400
+        else:
+            username = body['username']
+            password = body['password']
+        resp['user'] = username
+        try:
+            client_ip = request.headers.getlist("X-Forwarded-For")[0]
+        except IndexError:
+            client_ip = request.remote_addr
+
+        conn, status = _bind_ldap(username, password)
+        if not conn:
+            if status == 401:
+                resp['error'] = 'Invalid username or password'
+            elif status == 503:
+                resp['error'] = 'Unable to connect to LDAP server'
+            return ujson.dumps(resp), status
+
+        _, error = _user_ok(conn, body['username'])
+        conn.unbind()
+        if error:
+            resp['error'] = error
+            resp['content'] = {'token' : ''}
+            status = 403
+        else:
+            token = generate_v2_token(username=body['username'],
+                                      version=self.version,
+                                      client_ip=client_ip,
+                                      issued_at_timestamp=time.time())
+            if _added_token_to_redis(token, body['username']):
+                resp['content'] = {'token' : token}
+            else:
+                resp['error'] = 'Unable to persist token record'
+                resp['content'] = {'token' : ''}
                 status = 503
         return ujson.dumps(resp), status
 

@@ -29,3 +29,27 @@ def generate_token(username, version, memberOf, issued_at_timestamp):
               'memberOf' : memberOf,
              }
     return jwt.encode(claims, const.AUTH_TOKEN_SECRET, algorithm=const.AUTH_TOKEN_ALGORITHM)
+
+
+def generate_v2_token(username, version, client_ip, issued_at_timestamp):
+    """Creates the JSON Web Token with a new schema
+
+    :Returns: Bytes
+
+    :param username: The name of person who the token identifies
+    :type username: String
+
+    :param version: The version number for the token
+    :type version: Integer/String
+
+    :param client_ip: The IP of machine the client used to request a token.
+    :type client_ip: String
+    """
+    claims = {'exp' : issued_at_timestamp + const.AUTH_TOKEN_TIMEOUT,
+              'iat' : issued_at_timestamp,
+              'iss' : const.VLAB_URL,
+              'username' : username,
+              'version' : version,
+              'client_ip' : client_ip,
+             }
+    return jwt.encode(claims, const.AUTH_TOKEN_SECRET, algorithm=const.AUTH_TOKEN_ALGORITHM)
