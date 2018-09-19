@@ -1,5 +1,5 @@
 FROM willnx/vlab-base
-RUN mkdir -p /etc/vlab/auth_service
+RUN mkdir -p /etc/vlab/auth_server && chown nobody /etc/vlab/auth_server
 COPY dist/*.whl /tmp
 
 RUN pip install /tmp/*.whl && rm /tmp/*.whl
