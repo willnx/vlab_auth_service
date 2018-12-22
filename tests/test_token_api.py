@@ -7,7 +7,7 @@ from unittest.mock import patch, MagicMock
 
 import ujson
 import ldap3
-from ldap3.core.exceptions import LDAPBindError, LDAPSocketOpenError
+from ldap3.core.exceptions import LDAPBindError, LDAPSocketOpenError, LDAPSASLPrepError
 from redis import RedisError
 from jsonschema import Draft4Validator
 
@@ -339,7 +339,16 @@ class TestTokenHelpers(unittest.TestCase):
         """_bind_ldap returns 401 when a invalid user creds are supplied"""
         fake_ldap3.Connection.side_effect = LDAPBindError("testing")
 
-        _, status = token._bind_ldap('bob', 'iLoveCats', log=MagicMock())
+        _, status, _ = token._bind_ldap('bob', 'iLoveCats', log=MagicMock())
+
+        self.assertEqual(status, 401)
+
+    @patch.object(token, 'ldap3')
+    def test_bind_ldap_bad_chars(self, fake_ldap3):
+        """_bind_ldap returns 401 when supplied with control chars instead of normal letters"""
+        fake_ldap3.Connection.side_effect = LDAPSASLPrepError("testing")
+
+        _, status, _ = token._bind_ldap('bob', 'iLoveCats', log=MagicMock())
 
         self.assertEqual(status, 401)
 
@@ -348,7 +357,7 @@ class TestTokenHelpers(unittest.TestCase):
         """_bind_ldap returns 503 when the LDAP server is down"""
         fake_ldap3.Connection.side_effect = LDAPSocketOpenError("testing")
 
-        _, status = token._bind_ldap('bob', 'iLoveCats', log=MagicMock())
+        _, status, _ = token._bind_ldap('bob', 'iLoveCats', log=MagicMock())
 
         self.assertEqual(status, 503)
 
@@ -380,7 +389,7 @@ class AuthApiTokenV2Post(ApiTester):
     def test_post_v2_bad_creds(self, fake_logger, fake_strict_redis, fake_user_ok, fake_bind_ldap):
         """POST on /api/2/auth/token returns 401 when username/password is invalid"""
         fake_user_ok.return_value = ['some-group'], ''
-        fake_bind_ldap.return_value = None, 401
+        fake_bind_ldap.return_value = None, 401, 'Invalid username or password'
         resp = self.app.post('/api/2/auth/token',
                              content_type='application/json',
                              data=ujson.dumps({'username' : 'bob', 'password' : 'IloveCats'}))
@@ -394,7 +403,7 @@ class AuthApiTokenV2Post(ApiTester):
     def test_post_v2_ldap_down(self, fake_logger, fake_strict_redis, fake_user_ok, fake_bind_ldap):
         """POST on /api/2/auth/token returns 503 when the LDAP server is down"""
         fake_user_ok.return_value = ['some-group'], ''
-        fake_bind_ldap.return_value = None, 503
+        fake_bind_ldap.return_value = None, 503, 'LDAP down'
         resp = self.app.post('/api/2/auth/token',
                              content_type='application/json',
                              data=ujson.dumps({'username' : 'bob', 'password' : 'IloveCats'}))
@@ -408,7 +417,7 @@ class AuthApiTokenV2Post(ApiTester):
     def test_post_v2_redis_down(self, fake_logger, fake_added_token_to_redis, fake_user_ok, fake_bind_ldap):
         """POST on /api/2/auth/token returns 503 when unable to store the token in Redis"""
         fake_user_ok.return_value = [], ''
-        fake_bind_ldap.return_value = MagicMock(), 200
+        fake_bind_ldap.return_value = MagicMock(), 200, 'Redis down'
         fake_added_token_to_redis.return_value = False
         resp = self.app.post('/api/2/auth/token',
                              content_type='application/json',
@@ -423,7 +432,7 @@ class AuthApiTokenV2Post(ApiTester):
     def test_post_v2_user_denied(self, fake_logger, fake_strict_redis, fake_user_ok, fake_bind_ldap):
         """POST on /api/2/auth/token returns 403 when the user is denied, but exists"""
         fake_user_ok.return_value = [], 'Account Locked'
-        fake_bind_ldap.return_value = MagicMock(), 200
+        fake_bind_ldap.return_value = MagicMock(), 200, None
         resp = self.app.post('/api/2/auth/token',
                              content_type='application/json',
                              data=ujson.dumps({'username' : 'bob', 'password' : 'IloveCats'}))
@@ -437,7 +446,7 @@ class AuthApiTokenV2Post(ApiTester):
     def test_post_v2_ok(self, fake_logger, fake_added_token_to_redis, fake_user_ok, fake_bind_ldap):
         """POST on /api/2/auth/token returns 200 when everything works as expected"""
         fake_user_ok.return_value = [], ''
-        fake_bind_ldap.return_value = MagicMock(), 200
+        fake_bind_ldap.return_value = MagicMock(), 200, None
         fake_added_token_to_redis.return_value = True
         resp = self.app.post('/api/2/auth/token',
                              content_type='application/json',

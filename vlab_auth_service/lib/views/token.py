@@ -7,7 +7,7 @@ import time
 import jwt
 import ujson
 import ldap3
-from ldap3.core.exceptions import LDAPBindError, LDAPSocketOpenError
+from ldap3.core.exceptions import LDAPBindError, LDAPSocketOpenError, LDAPSASLPrepError
 from redis import StrictRedis, RedisError
 from flask import url_for
 from flask_classy import request, Response
@@ -177,12 +177,9 @@ class TokenView2(TokenView):
         except IndexError:
             client_ip = request.remote_addr
 
-        conn, status = _bind_ldap(username, password)
+        conn, status, bind_error = _bind_ldap(username, password)
         if not conn:
-            if status == 401:
-                resp['error'] = 'Invalid username or password'
-            elif status == 503:
-                resp['error'] = 'Unable to connect to LDAP server'
+            resp['error'] = bind_error
             return ujson.dumps(resp), status
 
         _, error = _user_ok(conn, body['username'])
@@ -288,18 +285,26 @@ def _bind_ldap(username, password, log=logger):
     """
     conn = None
     status = 200
+    bind_error = None
     try:
         full_username = "{0}\{1}".format(const.AUTH_DOMAIN, username)
         server = ldap3.Server(const.AUTH_LDAP_URL)
         conn = ldap3.Connection(server, full_username, password, auto_bind=True)
     except LDAPBindError:
         log.error("Login attempt failed for {}".format(username))
+        bind_error = 'Invalid username or password'
+        time.sleep(const.FAILED_LOGIN_PAUSE)
+        status = 401
+    except LDAPSASLPrepError:
+        log.error('Login attempt failed for {}; sent control chars (i.e. num lock off)'.format(username))
+        bind_error = 'Invalid characters presented (is num lock on?)'
         time.sleep(const.FAILED_LOGIN_PAUSE)
         status = 401
     except LDAPSocketOpenError:
         log.error('LDAP Down for {0}'.format(const.AUTH_LDAP_URL))
+        bind_error = 'LDAP server unavailable'
         status = 503
-    return conn, status
+    return conn, status, bind_error
 
 
 def _input_valid(body, schema):
