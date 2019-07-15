@@ -1,6 +1,8 @@
 .. image:: https://travis-ci.org/willnx/vlab_auth_service.svg?branch=master
     :target: https://travis-ci.org/willnx/vlab_auth_service
 
+.. _auth-service:
+
 ###########################
 vLab Authentication Service
 ###########################
