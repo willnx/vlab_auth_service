@@ -28,7 +28,7 @@ def generate_token(username, version, memberOf, issued_at_timestamp):
               'version' : version,
               'memberOf' : memberOf,
              }
-    return jwt.encode(claims, const.AUTH_TOKEN_SECRET, algorithm=const.AUTH_TOKEN_ALGORITHM)
+    return jwt.encode(claims, const.AUTH_TOKEN_SECRET, algorithm=const.AUTH_TOKEN_ALGORITHM).decode()
 
 
 def generate_v2_token(username, version, client_ip, issued_at_timestamp):
@@ -52,4 +52,4 @@ def generate_v2_token(username, version, client_ip, issued_at_timestamp):
               'version' : version,
               'client_ip' : client_ip,
              }
-    return jwt.encode(claims, const.AUTH_TOKEN_SECRET, algorithm=const.AUTH_TOKEN_ALGORITHM)
+    return jwt.encode(claims, const.AUTH_TOKEN_SECRET, algorithm=const.AUTH_TOKEN_ALGORITHM).decode()

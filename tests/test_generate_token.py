@@ -29,12 +29,12 @@ class TestGenerateToken(unittest.TestCase):
         self.assertTrue(token is not None)
 
     def test_return_type(self):
-        """Return type for generate_token function is Bytes"""
+        """Return type for generate_token function is String"""
         token = generate_token.generate_token(username=self.username,
                                               version=self.version,
                                               memberOf=self.memberOf,
                                               issued_at_timestamp=time.time())
-        self.assertTrue(isinstance(token, bytes))
+        self.assertTrue(isinstance(token, str))
 
     def test_token_content_keys(self):
         """The JSON Web Token contains all expected data"""
@@ -72,13 +72,13 @@ class TestGenerateV2Token(unittest.TestCase):
         self.assertTrue(token is not None)
 
     def test_return_type(self):
-        """Return type for generate_v2_token function is Bytes"""
+        """Return type for generate_v2_token function is String"""
         token = generate_token.generate_v2_token(username=self.username,
                                                  version=self.version,
                                                  client_ip='127.0.0.1',
                                                  issued_at_timestamp=time.time())
 
-        self.assertTrue(isinstance(token, bytes))
+        self.assertTrue(isinstance(token, str))
 
     def test_token_content_keys(self):
         """The JSON Web Token contains all expected data"""
