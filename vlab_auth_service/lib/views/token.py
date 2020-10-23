@@ -20,10 +20,29 @@ from vlab_auth_service.lib.generate_token import generate_token, generate_v2_tok
 logger = get_logger(__name__, loglevel=const.AUTH_LOG_LEVEL)
 
 
-class TokenView(BaseView):
-    """API end point for obtaining an auth token"""
-    route_base = '/api/1/auth/token'
-    version = 1
+
+
+class TokenView2(BaseView):
+    """API end point for obtaining an version 2 schema auth token"""
+    route_base = '/api/2/auth/token'
+    version = 2
+    POST_SCHEMA = { "$schema": "http://json-schema.org/draft-04/schema#",
+                    "type": "object",
+                    "properties": {
+                        "username": {
+                            "type": "string",
+                            "description": "The username to authenticate"
+                        },
+                        "password": {
+                            "type": "string",
+                            "description": "The password for the user"
+                        }
+                    },
+                    "required": [
+                        "username",
+                        "password"
+                    ]
+                }
     GET_SCHEMA = {"$schema": "http://json-schema.org/draft-04/schema#",
                   "description" : "Check if the token has been deleted"
                  }
@@ -39,23 +58,7 @@ class TokenView(BaseView):
                         "token"
                      ]
                     }
-    POST_SCHEMA = { "$schema": "http://json-schema.org/draft-04/schema#",
-    	            "type": "object",
-                	"properties": {
-                		"username": {
-                			"type": "string",
-                			"description": "The username to authenticate"
-                		},
-                		"password": {
-                			"type": "string",
-                			"description": "The password for the user"
-                		}
-                	},
-                	"required": [
-                		"username",
-                		"password"
-                	]
-                }
+
 
     @describe(get=GET_SCHEMA, delete=DELETE_SCHEMA, post=POST_SCHEMA)
     def get(self):
@@ -74,47 +77,6 @@ class TokenView(BaseView):
         except RedisError as doh:
             logger.exception(doh)
             status = 503
-        return ujson.dumps(resp), status
-
-    def post(self, *args, **kwargs):
-        """Obtain an auth token"""
-        resp = {"user" : "unknown"}
-        body = request.get_json()
-        if not _input_valid(body=body, schema=self.POST_SCHEMA):
-            resp['error'] = 'Invalid HTTP body supplied'
-            return ujson.dumps(resp), 400
-        else:
-            resp['user'] = body['username']
-
-        conn, status = _bind_ldap(body['username'], body['password'])
-        if not conn:
-            if status == 401:
-                resp['error'] = 'Invalid username or password'
-            elif status == 503:
-                resp['error'] = 'Unable to connect to LDAP server'
-            return ujson.dumps(resp), status
-
-        memberOf, error = _user_ok(conn, body['username'])
-        conn.unbind()
-        if not memberOf:
-            status = 500
-            resp['error'] = error
-            resp['content'] = {'token' : ''}
-        elif error:
-            resp['error'] = error
-            resp['content'] = {'token' : ''}
-            status = 403
-        else:
-            token = generate_token(username=body['username'],
-                                   version=self.version,
-                                   memberOf=memberOf,
-                                   issued_at_timestamp=time.time())
-            if _added_token_to_redis(token, body['username']):
-                resp['content'] = {'token' : token}
-            else:
-                resp['error'] = 'Unable to persist token record'
-                resp['content'] = {'token' : ''}
-                status = 503
         return ujson.dumps(resp), status
 
     def delete(self, *args, **kwargs):
@@ -139,30 +101,8 @@ class TokenView(BaseView):
         return ujson.dumps(resp), status
 
 
-class TokenView2(TokenView):
-    """API end point for obtaining an version 2 schema auth token"""
-    route_base = '/api/2/auth/token'
-    version = 2
-    POST_SCHEMA = { "$schema": "http://json-schema.org/draft-04/schema#",
-                    "type": "object",
-                    "properties": {
-                        "username": {
-                            "type": "string",
-                            "description": "The username to authenticate"
-                        },
-                        "password": {
-                            "type": "string",
-                            "description": "The password for the user"
-                        }
-                    },
-                    "required": [
-                        "username",
-                        "password"
-                    ]
-                }
-
     def post(self, *args, **kwargs):
-        """Obtain an v2 auth token"""
+        """Obtain an auth token"""
         resp = {"user" : "unknown"}
         body = request.get_json()
         if not _input_valid(body=body, schema=self.POST_SCHEMA):
@@ -182,7 +122,7 @@ class TokenView2(TokenView):
             resp['error'] = bind_error
             return ujson.dumps(resp), status
 
-        _, error = _user_ok(conn, body['username'])
+        email, error = _user_ok(conn, body['username'])
         conn.unbind()
         if error:
             resp['error'] = error
@@ -192,7 +132,8 @@ class TokenView2(TokenView):
             token = generate_v2_token(username=body['username'],
                                       version=self.version,
                                       client_ip=client_ip,
-                                      issued_at_timestamp=time.time())
+                                      issued_at_timestamp=time.time(),
+                                      email=email)
             if _added_token_to_redis(token, body['username']):
                 resp['content'] = {'token' : token}
             else:
@@ -244,16 +185,16 @@ def _user_ok(ldap_conn, username, log=logger):
     search_filter = '(&(objectclass=User)(sAMAccountName=%s))' % username
     ldap_conn.search(search_base=const.AUTH_SEARCH_BASE,
                      search_filter=search_filter,
-                     attributes=['memberOf', 'userAccountControl'])
+                     attributes=['mail', 'userAccountControl'])
     if len(ldap_conn.entries) != 1:
         err = 'Found {} users by name {}, '.format(len(ldap_conn.entries), username)
         err += 'unable to determine group memebership'
         log.error(err)
-        memberOf = []
+        email = ''
         error = 'Multiple accounts found for %s' % username
     else:
         ldap_user = ldap_conn.entries[0]
-        memberOf = [x for x in ldap_user.memberOf]
+        email = ldap_user.mail.value
         disabled = ldap_user.userAccountControl.value >> 1 & 1 # bit shift to the 2nd bit, and test if it's 1 or 0
         locked = ldap_user.userAccountControl.value >> 4 & 1
         if locked:
@@ -262,7 +203,7 @@ def _user_ok(ldap_conn, username, log=logger):
             error = "Account disabled"
         else:
             error = ''
-    return memberOf, error
+    return email, error
 
 
 def _bind_ldap(username, password, log=logger):

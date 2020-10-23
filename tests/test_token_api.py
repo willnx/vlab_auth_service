@@ -26,172 +26,66 @@ class ApiTester(unittest.TestCase):
 
 class AuthApiTokenGet(ApiTester):
     """
-    A set of test cases for GET on '/api/1/auth/token'
+    A set of test cases for GET on '/api/2/auth/token'
     """
     def test_get_describe(self):
         """?describe=true returns JSON"""
-        resp = self.app.get('/api/1/auth/token?describe=true')
+        resp = self.app.get('/api/2/auth/token?describe=true')
         data = resp.get_json()
 
         self.assertEqual(resp.headers['content-type'], 'application/json')
 
     def test_get_no_token(self):
-        """GET on /api/1/auth/token without header 'X-Auth' or param ?describe=true returns 400"""
-        resp = self.app.get('/api/1/auth/token')
+        """GET on /api/2/auth/token without header 'X-Auth' or param ?describe=true returns 400"""
+        resp = self.app.get('/api/2/auth/token')
 
         self.assertEqual(resp.status_code, 400)
 
     @patch.object(token, 'StrictRedis')
     @patch.object(token, 'logger')
     def test_get_redis_down(self, fake_logger, fake_strict_redis):
-        """GET on /api/1/auth/token returns 503 when RedisError is encounted"""
+        """GET on /api/2/auth/token returns 503 when RedisError is encounted"""
         fake_strict_redis.side_effect = RedisError('testing')
 
-        resp = self.app.get('/api/1/auth/token', headers={'X-Auth': 'asdfasdfasdfasdfsdf'})
+        resp = self.app.get('/api/2/auth/token', headers={'X-Auth': 'asdfasdfasdfasdfsdf'})
 
         self.assertEqual(resp.status_code, 503)
 
     @patch.object(token, 'StrictRedis')
     @patch.object(token, 'logger')
     def test_get_token_deleted(self, fake_logger, fake_strict_redis):
-        """GET on /api/1/auth/token returns 404 when the token has been deleted"""
+        """GET on /api/2/auth/token returns 404 when the token has been deleted"""
         fake_strict_redis.return_value.get.return_value = False
-        resp = self.app.get('/api/1/auth/token', headers={'X-Auth': 'asdfasdfasdfasdfsdf'})
+        resp = self.app.get('/api/2/auth/token', headers={'X-Auth': 'asdfasdfasdfasdfsdf'})
 
         self.assertEqual(resp.status_code, 404)
 
     @patch.object(token, 'StrictRedis')
     @patch.object(token, 'logger')
     def test_get_ok(self, fake_logger, fake_strict_redis):
-        """GET on /api/1/auth/token returns 200 when the token is valid"""
-        resp = self.app.get('/api/1/auth/token', headers={'X-Auth': 'asdfasdfasdfasdfsdf'})
-
-        self.assertEqual(resp.status_code, 200)
-
-
-class AuthApiTokenPost(ApiTester):
-    """
-    A set of test cases for POST on '/api/1/auth/token'
-    """
-    @patch.object(token, 'logger')
-    def test_post_bad_body(self, fake_logger):
-        """POST on /api/1/auth/token returns 400 when no body content is supplied"""
-        resp = self.app.post('/api/1/auth/token',
-                             content_type='application/json',
-                             data=ujson.dumps({}))
-
-        self.assertEqual(resp.status_code, 400)
-
-    @patch.object(token, 'logger')
-    def test_post_no_body(self, fake_logger):
-        """POST on /api/1/auth/token returns 400 when no body content is supplied"""
-        resp = self.app.post('/api/1/auth/token')
-
-        self.assertEqual(resp.status_code, 400)
-
-    @patch.object(token, '_bind_ldap')
-    @patch.object(token, '_user_ok')
-    @patch.object(token, 'StrictRedis')
-    @patch.object(token, 'logger')
-    def test_post_bad_creds(self, fake_logger, fake_strict_redis, fake_user_ok, fake_bind_ldap):
-        """POST on /api/1/auth/token returns 401 when username/password is invalid"""
-        fake_user_ok.return_value = ['some-group'], ''
-        fake_bind_ldap.return_value = None, 401
-        resp = self.app.post('/api/1/auth/token',
-                             content_type='application/json',
-                             data=ujson.dumps({'username' : 'bob', 'password' : 'IloveCats'}))
-
-        self.assertEqual(resp.status_code, 401)
-
-    @patch.object(token, '_bind_ldap')
-    @patch.object(token, '_user_ok')
-    @patch.object(token, 'StrictRedis')
-    @patch.object(token, 'logger')
-    def test_post_ldap_down(self, fake_logger, fake_strict_redis, fake_user_ok, fake_bind_ldap):
-        """POST on /api/1/auth/token returns 503 when the LDAP server is down"""
-        fake_user_ok.return_value = ['some-group'], ''
-        fake_bind_ldap.return_value = None, 503
-        resp = self.app.post('/api/1/auth/token',
-                             content_type='application/json',
-                             data=ujson.dumps({'username' : 'bob', 'password' : 'IloveCats'}))
-
-        self.assertEqual(resp.status_code, 503)
-
-    @patch.object(token, '_bind_ldap')
-    @patch.object(token, '_user_ok')
-    @patch.object(token, '_added_token_to_redis')
-    @patch.object(token, 'logger')
-    def test_post_redis_down(self, fake_logger, fake_added_token_to_redis, fake_user_ok, fake_bind_ldap):
-        """POST on /api/1/auth/token returns 503 when unable to store the token in Redis"""
-        fake_user_ok.return_value = ['some-group'], ''
-        fake_bind_ldap.return_value = MagicMock(), 200
-        fake_added_token_to_redis.return_value = False
-        resp = self.app.post('/api/1/auth/token',
-                             content_type='application/json',
-                             data=ujson.dumps({'username' : 'bob', 'password' : 'IloveCats'}))
-
-        self.assertEqual(resp.status_code, 503)
-
-    @patch.object(token, '_bind_ldap')
-    @patch.object(token, '_user_ok')
-    @patch.object(token, 'StrictRedis')
-    @patch.object(token, 'logger')
-    def test_post_user_denied(self, fake_logger, fake_strict_redis, fake_user_ok, fake_bind_ldap):
-        """POST on /api/1/auth/token returns 403 when the user is denied, but exists"""
-        fake_user_ok.return_value = ['some-group'], 'Account Locked'
-        fake_bind_ldap.return_value = MagicMock(), 200
-        resp = self.app.post('/api/1/auth/token',
-                             content_type='application/json',
-                             data=ujson.dumps({'username' : 'bob', 'password' : 'IloveCats'}))
-
-        self.assertEqual(resp.status_code, 403)
-
-    @patch.object(token, '_bind_ldap')
-    @patch.object(token, '_user_ok')
-    @patch.object(token, 'StrictRedis')
-    @patch.object(token, 'logger')
-    def test_post_no_memberOf(self, fake_logger, fake_strict_redis, fake_user_ok, fake_bind_ldap):
-        """POST on /api/1/auth/token returns 500 if user group membership is empty"""
-        fake_user_ok.return_value = [], 'Uanble to determine mebership'
-        fake_bind_ldap.return_value = MagicMock(), 200
-        resp = self.app.post('/api/1/auth/token',
-                             content_type='application/json',
-                             data=ujson.dumps({'username' : 'bob', 'password' : 'IloveCats'}))
-
-        self.assertEqual(resp.status_code, 500)
-
-    @patch.object(token, '_bind_ldap')
-    @patch.object(token, '_user_ok')
-    @patch.object(token, 'StrictRedis')
-    @patch.object(token, 'logger')
-    def test_post_ok(self, fake_logger, fake_strict_redis, fake_user_ok, fake_bind_ldap):
-        """POST on /api/1/auth/token returns 200 when a token is returned"""
-        fake_user_ok.return_value = ['some-group'], ''
-        fake_bind_ldap.return_value = MagicMock(), 200
-        resp = self.app.post('/api/1/auth/token',
-                             content_type='application/json',
-                             data=ujson.dumps({'username' : 'bob', 'password' : 'IloveCats'}))
+        """GET on /api/2/auth/token returns 200 when the token is valid"""
+        resp = self.app.get('/api/2/auth/token', headers={'X-Auth': 'asdfasdfasdfasdfsdf'})
 
         self.assertEqual(resp.status_code, 200)
 
 
 class AuthApiTokenDelete(ApiTester):
     """
-    A set of test cases for POST on '/api/1/auth/token'
+    A set of test cases for POST on '/api/2/auth/token'
     """
     @patch.object(token, 'StrictRedis')
     @patch.object(token, 'logger')
     def test_delete_no_body(self, fake_logger, fake_strict_redis):
-        """DELETE on /api/1/auth/token returns 400 when there is no body content"""
-        resp = self.app.delete('/api/1/auth/token')
+        """DELETE on /api/2/auth/token returns 400 when there is no body content"""
+        resp = self.app.delete('/api/2/auth/token')
 
         self.assertEqual(resp.status_code, 400)
 
     @patch.object(token, 'StrictRedis')
     @patch.object(token, 'logger')
     def test_delete_bad_body(self, fake_logger, fake_strict_redis):
-        """DELETE on /api/1/auth/token returns 400 when provided with invalid body content"""
-        resp = self.app.delete('/api/1/auth/token',
+        """DELETE on /api/2/auth/token returns 400 when provided with invalid body content"""
+        resp = self.app.delete('/api/2/auth/token',
                                content_type='application/json',
                                data=ujson.dumps({}))
 
@@ -200,9 +94,9 @@ class AuthApiTokenDelete(ApiTester):
     @patch.object(token, 'StrictRedis')
     @patch.object(token, 'logger')
     def test_delete_redis_down(self, fake_logger, fake_strict_redis):
-        """DELETE on /api/1/auth/token returns 503 when it cannot connect to Redis"""
+        """DELETE on /api/2/auth/token returns 503 when it cannot connect to Redis"""
         fake_strict_redis.side_effect = RedisError('testing')
-        resp = self.app.delete('/api/1/auth/token',
+        resp = self.app.delete('/api/2/auth/token',
                                content_type='application/json',
                                data=ujson.dumps({'token' : 'asdfasdf'}))
 
@@ -212,9 +106,9 @@ class AuthApiTokenDelete(ApiTester):
     @patch.object(token, 'StrictRedis')
     @patch.object(token, 'logger')
     def test_delete_already_gone(self, fake_logger, fake_strict_redis):
-        """DELETE on /api/1/auth/token returns 200 when the token is already gone from Redis"""
+        """DELETE on /api/2/auth/token returns 200 when the token is already gone from Redis"""
         fake_strict_redis.return_value.delete.return_value = False
-        resp = self.app.delete('/api/1/auth/token',
+        resp = self.app.delete('/api/2/auth/token',
                                content_type='application/json',
                                data=ujson.dumps({'token' : 'asdfasdf'}))
 
@@ -223,8 +117,8 @@ class AuthApiTokenDelete(ApiTester):
     @patch.object(token, 'StrictRedis')
     @patch.object(token, 'logger')
     def test_delete_ok(self, fake_logger, fake_strict_redis):
-        """DELETE on /api/1/auth/token returns 200 when the token is removed from Redis"""
-        resp = self.app.delete('/api/1/auth/token',
+        """DELETE on /api/2/auth/token returns 200 when the token is removed from Redis"""
+        resp = self.app.delete('/api/2/auth/token',
                                content_type='application/json',
                                data=ujson.dumps({'token' : 'asdfasdf'}))
 
@@ -233,13 +127,13 @@ class AuthApiTokenDelete(ApiTester):
 
 class AuthApiTokenSchemas(unittest.TestCase):
     """
-    A suite of tests for the API schemas used in /api/1/auth/token
+    A suite of tests for the API schemas used in /api/2/auth/token
     """
 
     def test_get_args_schema(self):
-        """The schema we've defined for GET args on /api/1/auth/token is valid"""
+        """The schema we've defined for GET args on /api/2/auth/token is valid"""
         try:
-            Draft4Validator.check_schema(token.TokenView.GET_SCHEMA)
+            Draft4Validator.check_schema(token.TokenView2.GET_SCHEMA)
             schema_valid = True
         except RuntimeError:
             schema_valid = False
@@ -247,9 +141,9 @@ class AuthApiTokenSchemas(unittest.TestCase):
         self.assertTrue(schema_valid)
 
     def test_delete_schema(self):
-        """The schema we've defined for DELETE on /api/1/auth/token is valid"""
+        """The schema we've defined for DELETE on /api/2/auth/token is valid"""
         try:
-            Draft4Validator.check_schema(token.TokenView.DELETE_SCHEMA)
+            Draft4Validator.check_schema(token.TokenView2.DELETE_SCHEMA)
             schema_valid = True
         except RuntimeError:
             schema_valid = False
@@ -257,9 +151,9 @@ class AuthApiTokenSchemas(unittest.TestCase):
         self.assertTrue(schema_valid)
 
     def test_post_schema(self):
-        """The schema we've defined for POST on /api/1/auth/token is valid"""
+        """The schema we've defined for POST on /api/2/auth/token is valid"""
         try:
-            Draft4Validator.check_schema(token.TokenView.POST_SCHEMA)
+            Draft4Validator.check_schema(token.TokenView2.POST_SCHEMA)
             schema_valid = True
         except RuntimeError:
             schema_valid = False
@@ -289,12 +183,12 @@ class TestTokenHelpers(unittest.TestCase):
         fake_conn = MagicMock()
         fake_conn.entries = ['bob', 'bob']
 
-        memberOf, error = token._user_ok(ldap_conn=fake_conn, username='bob', log=MagicMock())
+        email, error = token._user_ok(ldap_conn=fake_conn, username='bob', log=MagicMock())
         expected_error = 'Multiple accounts found for bob'
-        expected_memberOf = []
+        expected_email = ''
 
         self.assertEqual(error, expected_error)
-        self.assertEqual(memberOf, expected_memberOf)
+        self.assertEqual(email, expected_email)
 
     def test_user_ok_locked(self):
         """_user_ok returns an error if the user's account is locked"""
@@ -325,13 +219,13 @@ class TestTokenHelpers(unittest.TestCase):
         fake_conn = MagicMock()
         fake_user = MagicMock()
         fake_user.userAccountControl.value = 0
-        fake_user.memberOf = ['some-group']
+        fake_user.mail.value = 'foo@bar.com'
         fake_conn.entries = [fake_user]
 
-        memberOf, err = token._user_ok(ldap_conn=fake_conn, username='bob', log=MagicMock())
-        expected_memberOf = ['some-group']
+        email, err = token._user_ok(ldap_conn=fake_conn, username='bob', log=MagicMock())
+        expected_email = 'foo@bar.com'
 
-        self.assertEqual(memberOf, expected_memberOf)
+        self.assertEqual(email, expected_email)
         self.assertEqual(err, '')
 
     @patch.object(token, 'ldap3')

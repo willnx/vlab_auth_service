@@ -31,7 +31,7 @@ def generate_token(username, version, memberOf, issued_at_timestamp):
     return jwt.encode(claims, const.AUTH_TOKEN_SECRET, algorithm=const.AUTH_TOKEN_ALGORITHM).decode()
 
 
-def generate_v2_token(username, version, client_ip, issued_at_timestamp):
+def generate_v2_token(username, version, client_ip, issued_at_timestamp, email=''):
     """Creates the JSON Web Token with a new schema
 
     :Returns: Bytes
@@ -44,6 +44,9 @@ def generate_v2_token(username, version, client_ip, issued_at_timestamp):
 
     :param client_ip: The IP of machine the client used to request a token.
     :type client_ip: String
+
+    :param email: The email address associated with a user.
+    :type email: String
     """
     claims = {'exp' : issued_at_timestamp + const.AUTH_TOKEN_TIMEOUT,
               'iat' : issued_at_timestamp,
@@ -51,5 +54,6 @@ def generate_v2_token(username, version, client_ip, issued_at_timestamp):
               'username' : username,
               'version' : version,
               'client_ip' : client_ip,
+              'email' : email,
              }
     return jwt.encode(claims, const.AUTH_TOKEN_SECRET, algorithm=const.AUTH_TOKEN_ALGORITHM).decode()

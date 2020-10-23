@@ -91,12 +91,32 @@ class TestGenerateV2Token(unittest.TestCase):
         expected = {'client_ip' : '127.0.0.1',
                     'username' : 'alice',
                     'version' : 2,
+                    'email' : '',
                     'iat' : time_stamp,
                     'exp' : time_stamp + const.AUTH_TOKEN_TIMEOUT,
                     'iss' : 'https://localhost'}
 
         self.assertEqual(token_data, expected)
 
+    def test_token_email(self):
+        """The JSON Web Token assigns the email when provided with one"""
+        time_stamp = time.time()
+        token = generate_token.generate_v2_token(username=self.username,
+                                                 version=self.version,
+                                                 client_ip='127.0.0.1',
+                                                 email='foo@bar.org',
+                                                 issued_at_timestamp=time_stamp)
+
+        token_data = jwt.decode(token, const.AUTH_TOKEN_SECRET, algorithms=const.AUTH_TOKEN_ALGORITHM)
+        expected = {'client_ip' : '127.0.0.1',
+                    'username' : 'alice',
+                    'version' : 2,
+                    'email' : 'foo@bar.org',
+                    'iat' : time_stamp,
+                    'exp' : time_stamp + const.AUTH_TOKEN_TIMEOUT,
+                    'iss' : 'https://localhost'}
+
+        self.assertEqual(token_data, expected)
 
 if __name__ == '__main__':
     unittest.main()
