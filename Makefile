@@ -24,6 +24,7 @@ test: uninstall install
 
 images: build
 	docker build -t willnx/vlab-auth-service .
+	docker build -f RedisDockerfile -t willnx/vlab-auth-db .
 
 up: clean
 	docker-compose up --abort-on-container-exit
