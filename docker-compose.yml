@@ -1,0 +1,28 @@
+version: '3.4'
+services:
+    auth-api:
+     ports:
+       - 5000:5000
+     sysctls:
+       - net.core.somaxconn=1024
+     image:
+       willnx/vlab-auth-service
+     command: ["python3", "app.py"]
+     volumes:
+       - ./vlab_auth_service:/usr/lib/python3.6/site-packages/vlab_auth_service
+       #- ./private.key:/etc/vlab/auth_server/private.key
+       #- ./public.key:/etc/vlab/auth_server/public.key
+     environment:
+       - AUTH_TOKEN_TIMEOUT=18000
+       - AUTH_LDAP_URL=ldaps://10.146.130.182
+       - AUTH_DONMAIN=CORP
+       - AUTH_SEARCH_BASE=DC=corp,DC=emc,DC=com
+       - VLAB_URL=https://localhost
+       #- AUTH_TOKEN_ALGORITHM=RS512
+     restart: unless-stopped
+    auth-redis:
+     image:
+       willnx/vlab-auth-db
+     sysctls:
+       - net.core.somaxconn=1024
+     restart: unless-stopped
