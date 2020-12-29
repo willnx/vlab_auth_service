@@ -10,7 +10,7 @@ from vlab_auth_service.lib import const
 def generate_token(username, version, memberOf, issued_at_timestamp):
     """Creates the JSON Web Token
 
-    :Returns: Bytes
+    :Returns: String
 
     :param username: The name of person who the token identifies
     :type username: String
@@ -28,13 +28,13 @@ def generate_token(username, version, memberOf, issued_at_timestamp):
               'version' : version,
               'memberOf' : memberOf,
              }
-    return jwt.encode(claims, const.AUTH_TOKEN_SECRET, algorithm=const.AUTH_TOKEN_ALGORITHM).decode()
+    return jwt.encode(claims, const.AUTH_TOKEN_SECRET, algorithm=const.AUTH_TOKEN_ALGORITHM)
 
 
 def generate_v2_token(username, version, client_ip, issued_at_timestamp, email=''):
     """Creates the JSON Web Token with a new schema
 
-    :Returns: Bytes
+    :Returns: String
 
     :param username: The name of person who the token identifies
     :type username: String
@@ -56,4 +56,4 @@ def generate_v2_token(username, version, client_ip, issued_at_timestamp, email='
               'client_ip' : client_ip,
               'email' : email,
              }
-    return jwt.encode(claims, const.AUTH_TOKEN_SECRET, algorithm=const.AUTH_TOKEN_ALGORITHM).decode()
+    return jwt.encode(claims, const.AUTH_TOKEN_SECRET, algorithm=const.AUTH_TOKEN_ALGORITHM)
