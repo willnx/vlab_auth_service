@@ -9,7 +9,7 @@ services:
        willnx/vlab-auth-service
      command: ["python3", "app.py"]
      volumes:
-       - ./vlab_auth_service:/usr/lib/python3.6/site-packages/vlab_auth_service
+       - ./vlab_auth_service:/usr/lib/python3.8/site-packages/vlab_auth_service
        #- ./private.key:/etc/vlab/auth_server/private.key
        #- ./public.key:/etc/vlab/auth_server/public.key
      environment:
