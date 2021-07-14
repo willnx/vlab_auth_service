@@ -276,6 +276,34 @@ class AuthApiTokenV2Post(ApiTester):
 
         self.assertEqual(resp.status_code, 400)
 
+    @patch.object(token, 'logger')
+    def test_post_v2_empty_password(self, fake_logger):
+        """POST on /api/2/auth/token returns HTTP 400 if the password is an empty string"""
+        resp = self.app.post('/api/2/auth/token', json={"username" : 'bob', 'password' : ''})
+
+        self.assertEqual(resp.status_code, 400)
+
+    @patch.object(token, 'logger')
+    def test_post_v2_empty_password_msg(self, fake_logger):
+        """POST on /api/2/auth/token returns a useful error if the password is an empty string"""
+        resp = self.app.post('/api/2/auth/token', json={"username" : 'bob', 'password' : ''})
+
+        self.assertEqual(resp.json['error'], ['No password supplied'])
+
+    @patch.object(token, 'logger')
+    def test_post_v2_empty_username(self, fake_logger):
+        """POST on /api/2/auth/token returns HTTP 400 if the username is an empty string"""
+        resp = self.app.post('/api/2/auth/token', json={"username" : '', 'password' : 'asdf'})
+
+        self.assertEqual(resp.status_code, 400)
+
+    @patch.object(token, 'logger')
+    def test_post_v2_empty_username_msg(self, fake_logger):
+        """POST on /api/2/auth/token returns a useful error if the username is an empty string"""
+        resp = self.app.post('/api/2/auth/token', json={"username" : '', 'password' : 'asdf'})
+
+        self.assertEqual(resp.json['error'], ['No username supplied'])
+
     @patch.object(token, '_bind_ldap')
     @patch.object(token, '_user_ok')
     @patch.object(token, 'StrictRedis')
