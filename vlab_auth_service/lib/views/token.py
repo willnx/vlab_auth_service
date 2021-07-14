@@ -108,6 +108,12 @@ class TokenView2(BaseView):
         if not _input_valid(body=body, schema=self.POST_SCHEMA):
             resp['error'] = 'Invalid HTTP body supplied'
             return ujson.dumps(resp), 400
+        elif not body['username']:
+            resp['error'] = 'No username supplied',
+            return ujson.dumps(resp), 400
+        elif not body['password']:
+            resp['error'] = 'No password supplied',
+            return ujson.dumps(resp), 400
         else:
             username = body['username']
             password = body['password']
